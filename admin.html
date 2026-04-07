@@ -462,6 +462,60 @@
           display: block;
         }
       }
+
+      /* 🔥 Search box styles */
+      .search-wrapper {
+        position: relative;
+        margin-bottom: 16px;
+        max-width: 400px;
+      }
+
+      .search-wrapper input {
+        width: 100%;
+        padding: 10px 40px 10px 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--white);
+        font-size: 14px;
+        transition:
+          border 0.3s,
+          background 0.3s;
+      }
+
+      .search-wrapper input::placeholder {
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .search-wrapper input:focus {
+        outline: none;
+        border-color: var(--green);
+        background: rgba(0, 198, 122, 0.1);
+      }
+
+      .search-wrapper .search-icon {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 18px;
+        color: rgba(255, 255, 255, 0.6);
+        pointer-events: none;
+      }
+
+      /* 🔥 Mobile responsive */
+      @media (max-width: 600px) {
+        .search-wrapper {
+          max-width: 100%;
+        }
+        .search-wrapper input {
+          font-size: 13px;
+          padding: 8px 36px 8px 12px;
+        }
+        .search-wrapper .search-icon {
+          font-size: 16px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -677,6 +731,17 @@
       <!-- USERS PAGE -->
       <div class="page" id="page-users">
         <h2 class="page-title">👥 ইউজার ব্যবস্থাপনা</h2>
+
+        <!-- 🔥 Search wrapper -->
+        <div class="search-wrapper">
+          <input
+            type="text"
+            id="userSearch"
+            placeholder="ইউজারের নাম, ইমেইল বা ফোন লিখুন..."
+          />
+          <span class="search-icon">🔍</span>
+        </div>
+
         <div class="card">
           <div class="table-wrap">
             <table>
@@ -1292,10 +1357,11 @@
          If it fails, use the console link to create it, or fall back
          to client-side sorting (shown below).
       ══════════════════════════════ */
+      let allUsers = []; // 🔥 Store all users for search
+
       async function loadUsers() {
         const tbody = document.getElementById("usersBody");
         try {
-          // Try compound query first
           let snap;
           try {
             snap = await getDocs(
@@ -1307,10 +1373,9 @@
             );
           } catch (indexErr) {
             console.warn(
-              "Compound index missing, falling back to client sort:",
+              "Compound index missing, fallback client sort:",
               indexErr,
             );
-            // Fallback: fetch without orderBy, sort client-side
             snap = await getDocs(
               query(collection(db, "users"), where("role", "==", "user")),
             );
@@ -1322,8 +1387,8 @@
             return;
           }
 
-          // Sort client-side (safe regardless of which path was taken)
-          const users = snap.docs
+          // Save all users for search
+          allUsers = snap.docs
             .map((d) => d.data())
             .sort((a, b) => {
               const ta = a.createdAt?.toDate?.() ?? new Date(0);
@@ -1331,31 +1396,56 @@
               return tb - ta;
             });
 
-          tbody.innerHTML = users
-            .map(
-              (u) =>
-                `<tr>
-              <td style="color:var(--white);font-weight:500">${u.name || "-"}</td>
-              <td style="font-size:13px;color:var(--text-muted)">${u.email || "-"}</td>
-              <td>${u.phone || "-"}</td>
-              <td>
-                <span style="font-family:monospace;background:rgba(0,198,122,0.1);color:var(--green);padding:3px 8px;border-radius:5px;font-size:13px">
-                  ${u.myReferralId || "-"}
-                </span>
-              </td>
-              <td>${u.totalOrders || 0}</td>
-              <td style="color:var(--green)">${fmt(u.totalSales)}</td>
-              <td style="color:var(--gold)">${fmt(u.totalEarnings)}</td>
-              <td style="font-size:12px;color:var(--text-muted)">${fmtDate(u.createdAt)}</td>
-            </tr>`,
-            )
-            .join("");
+          renderUsers(allUsers);
         } catch (e) {
           console.error("loadUsers error:", e);
           tbody.innerHTML =
             '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">লোড করতে সমস্যা হয়েছে</td></tr>';
         }
       }
+
+      // 🔹 Function to render user rows
+      function renderUsers(users) {
+        const tbody = document.getElementById("usersBody");
+        if (!users.length) {
+          tbody.innerHTML =
+            '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">কোনো ইউজার মিলেনি</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = users
+          .map(
+            (u) =>
+              `<tr>
+          <td style="color:var(--white);font-weight:500">${u.name || "-"}</td>
+          <td style="font-size:13px;color:var(--text-muted)">${u.email || "-"}</td>
+          <td>${u.phone || "-"}</td>
+          <td>
+            <span style="font-family:monospace;background:rgba(0,198,122,0.1);color:var(--green);padding:3px 8px;border-radius:5px;font-size:13px">
+              ${u.myReferralId || "-"}
+            </span>
+          </td>
+          <td>${u.totalOrders || 0}</td>
+          <td style="color:var(--green)">${fmt(u.totalSales)}</td>
+          <td style="color:var(--gold)">${fmt(u.totalEarnings)}</td>
+          <td style="font-size:12px;color:var(--text-muted)">${fmtDate(u.createdAt)}</td>
+        </tr>`,
+          )
+          .join("");
+      }
+
+      // 🔹 Search filter
+      document.getElementById("userSearch").addEventListener("input", (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        const filtered = allUsers.filter(
+          (u) =>
+            (u.name || "").toLowerCase().includes(query) ||
+            (u.email || "").toLowerCase().includes(query) ||
+            (u.phone || "").toLowerCase().includes(query) ||
+            (u.myReferralId || "").toLowerCase().includes(query),
+        );
+        renderUsers(filtered);
+      });
 
       /* ══════════════════════════════
          UI HELPERS
