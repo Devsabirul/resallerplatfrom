@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>অ্যাডমিন প্যানেল - ইতালি রিসেলার</title>
+    <title>অ্যাডমিন প্যানেল - লোকাল অ্যাফিলিয়েট</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Tiro+Bangla:ital@0;1&display=swap"
       rel="stylesheet"
@@ -958,47 +958,50 @@
          PRODUCTS
       ══════════════════════════════ */
       async function loadProducts() {
-  const tbody = document.getElementById("productsBody");
-  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">লোড হচ্ছে...</td></tr>';
-  try {
-    // Fetch resellerProducts first — these are the configured ones
-    const [resSnap, prodSnap] = await Promise.all([
-      getDocs(collection(db, "resellerProducts")),
-      getDocs(collection(db, "products")),
-    ]);
+        const tbody = document.getElementById("productsBody");
+        tbody.innerHTML =
+          '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">লোড হচ্ছে...</td></tr>';
+        try {
+          // Fetch resellerProducts first — these are the configured ones
+          const [resSnap, prodSnap] = await Promise.all([
+            getDocs(collection(db, "resellerProducts")),
+            getDocs(collection(db, "products")),
+          ]);
 
-    // Build productId → product master data map
-    const productMap = {};
-    prodSnap.docs.forEach((d) => {
-      productMap[d.id] = { id: d.id, ...d.data() };
-    });
+          // Build productId → product master data map
+          const productMap = {};
+          prodSnap.docs.forEach((d) => {
+            productMap[d.id] = { id: d.id, ...d.data() };
+          });
 
-    // Only show rows that exist in resellerProducts
-    const items = resSnap.docs.map((d) => {
-      const res     = d.data();
-      const master  = productMap[res.productId] || {};
-      return {
-        resellerDocId: d.id,
-        productId:     res.productId,
-        name:          master.name      || "অজানা প্রোডাক্ট",
-        sizes:         master.sizes     || [],
-        sellingPrice:  res.sellingPrice ?? 0,
-        costPrice:     res.costPrice    ?? 0,
-        commission:    res.commission   ?? 0,
-      };
-    });
+          // Only show rows that exist in resellerProducts
+          const items = resSnap.docs.map((d) => {
+            const res = d.data();
+            const master = productMap[res.productId] || {};
+            return {
+              resellerDocId: d.id,
+              productId: res.productId,
+              name: master.name || "অজানা প্রোডাক্ট",
+              sizes: master.sizes || [],
+              sellingPrice: res.sellingPrice ?? 0,
+              costPrice: res.costPrice ?? 0,
+              commission: res.commission ?? 0,
+            };
+          });
 
-    if (!items.length) {
-      tbody.innerHTML = `
+          if (!items.length) {
+            tbody.innerHTML = `
         <tr><td colspan="6" style="text-align:center;padding:48px;color:var(--text-muted)">
           <div style="font-size:36px;margin-bottom:10px">📦</div>
           <div>কোনো প্রোডাক্ট কনফিগার করা হয়নি</div>
           <div style="font-size:12px;margin-top:6px">উপরের বাটন দিয়ে প্রোডাক্ট যোগ করুন</div>
         </td></tr>`;
-      return;
-    }
+            return;
+          }
 
-    tbody.innerHTML = items.map((p) => `
+          tbody.innerHTML = items
+            .map(
+              (p) => `
       <tr>
         <td style="color:var(--white);font-weight:500">${p.name}</td>
         <td style="color:var(--green);font-weight:600">${fmt(p.sellingPrice)}</td>
@@ -1015,14 +1018,15 @@
           <button class="btn btn-sm btn-red"
             onclick="window.deleteResellerProduct('${p.productId}')">🗑️ মুছুন</button>
         </td>
-      </tr>`
-    ).join("");
-
-  } catch (e) {
-    console.error("loadProducts error:", e);
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">লোড করতে সমস্যা হয়েছে</td></tr>';
-  }
-}
+      </tr>`,
+            )
+            .join("");
+        } catch (e) {
+          console.error("loadProducts error:", e);
+          tbody.innerHTML =
+            '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">লোড করতে সমস্যা হয়েছে</td></tr>';
+        }
+      }
 
       /* Open product modal (add or edit) */
       window.openResellerModal = async function (productId = "") {
@@ -1382,6 +1386,10 @@
         overlay.addEventListener("click", (e) => {
           if (e.target === overlay) overlay.classList.remove("open");
         });
+      });
+
+      document.addEventListener("contextmenu", function (e) {
+        e.preventDefault(); // ডিফল্ট রাইট ক্লিক বন্ধ
       });
     </script>
   </body>
